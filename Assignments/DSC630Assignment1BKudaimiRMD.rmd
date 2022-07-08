@@ -1,0 +1,135 @@
+---
+title: "DSC630Assignment1BKudaimiRMD"
+author: "Bilal Kudaimi"
+date: "6/10/2021"
+output: pdf_document
+---
+
+# Importing libraries and generating summary statistics 
+
+```{r setup, echo=FALSE}
+library(rjson)
+library(blsAPI)
+library(dplyr)
+library(Hmisc)
+library(ggplot2)
+library(gmodels)
+
+#Part 1: Requesting the BLS data
+
+#Requesting the unemployment rate in California
+CA_Unemployed <- blsAPI('LASST060000000000003', return_data_frame = TRUE)
+
+#Requesting the employment-population ratio in California
+CA_EPRatio <- blsAPI('LASST060000000000007', return_data_frame = TRUE)
+
+#Requesting the export price index of organic chemicals
+CA_EPI_org <- blsAPI('EIUID29', return_data_frame = TRUE)
+
+#Merging these three together
+CA1 <- merge(CA_Unemployed, CA_EPRatio, by=c("year","periodName"))
+CA2 <- merge(CA1, CA_EPI_org, by = c("year", "periodName"))
+
+#Renaming some of the columns
+names(CA2)[names(CA2) == "value.x"] <- "CA_Unemployment_Rate"
+names(CA2)[names(CA2) == "value.y"] <- "CA_EP_Ratio"
+names(CA2)[names(CA2) == "value"] <- "CA_Employment_Price_Index_Chemicals"
+
+#Convert string representations to numbers
+CA2$CA_Unemployment_Rate <- as.numeric(CA2$CA_Unemployment_Rate)
+CA2$CA_EP_Ratio <- as.numeric(CA2$CA_EP_Ratio)
+CA2$CA_Employment_Price_Index_Chemicals <- as.numeric(CA2$CA_Employment_Price_Index_Chemicals)
+
+#Part 1: Summary statistics for 2 variables, histograms, boxplots, density plots, and saving the data as a CSV file
+
+#Summary statistics of 2 variables using the Hmisc library
+summary1 <- describe(CA2$CA_Unemployment_Rate)
+summary2 <- describe(CA2$CA_EP_Ratio)
+summary1
+summary2
+```
+
+
+# Histograms, boxplots, and density plots of two variables
+
+```{r plots, echo=FALSE}
+#Histograms of the 2 variables
+
+ggplot(CA2, aes(x = CA_Unemployment_Rate)) + geom_histogram()
+ggplot(CA2, aes(x = CA_EP_Ratio)) + geom_histogram()
+
+#Boxplots of the 2 variables
+
+ggplot(CA2, aes(x = CA_Unemployment_Rate)) + geom_boxplot()
+ggplot(CA2, aes(x = CA_EP_Ratio)) + geom_boxplot()
+
+#Density plots of the 2 variables
+
+ggplot(CA2, aes(x = CA_Unemployment_Rate)) + geom_density()
+ggplot(CA2, aes(x = CA_EP_Ratio)) + geom_density()
+
+#Saving the data frame locally as a CSV file
+write.csv(CA2, 'CA2.csv')
+```
+
+
+# Bivariate plots and cross tables of different variables
+
+```{r moreplots, echo=FALSE}
+#Part 2: Generating bivariate analyses from the same dataset but with different variables and finding the correlation
+
+#Bivariate plots
+ggplot(CA2, aes(x = CA_Unemployment_Rate, y = CA_Employment_Price_Index_Chemicals)) + geom_point()
+ggplot(CA2, aes(x = CA_Unemployment_Rate, y = CA_EP_Ratio)) + geom_point()
+ggplot(CA2, aes(x = CA_EP_Ratio, y = CA_Employment_Price_Index_Chemicals)) + geom_point()
+
+#Cross tables
+CrossTable(CA2$CA_Unemployment_Rate, CA2$CA_Employment_Price_Index_Chemicals, digits = 2)
+CrossTable(CA2$CA_Unemployment_Rate, CA2$CA_EP_Ratio, digits = 2)
+CrossTable(CA2$CA_EP_Ratio, CA2$CA_Employment_Price_Index_Chemicals, digits = 2)
+```
+
+# Correlation between CA unemployment rate and employment price index (EPI) for the organic chemical industry
+
+```{r correlation1, echo=FALSE}
+
+cor(CA2$CA_Unemployment_Rate, CA2$CA_Employment_Price_Index_Chemicals, method = "spearman")
+
+
+```
+
+# Correlation between CA unemployment rate and CA employment to population ratio
+
+```{r correlation2, echo=FALSE}
+
+#Only this correlation will use the Pearson method, as it is the only graph that displayed a linear trend.
+cor(CA2$CA_Unemployment_Rate, CA2$CA_EP_Ratio, method = "pearson")
+
+```
+
+# Correlation between CA employment to population ratio and EPI for the organic chemical industry
+
+```{r correlation3, echo=FALSE}
+
+cor(CA2$CA_EP_Ratio, CA2$CA_Employment_Price_Index_Chemicals, method = "spearman")
+
+```
+
+
+# Sumamry report of the data
+
+``` {r summary, echo=FALSE}
+
+summary(CA2)
+str(CA2)
+```
+
+# Discussion of four results of the data:
+
+## 1: As the unemployment rate rises past 8 percent, the employment price index (EPI) of organic chemicals falls exponentially. EPI documents the changes in the costs of labor for businesses in the US; this EPI series is exclusively for the organic chemical manufacturing sector. The drop in EPI could be because as people lose their jobs, the cost of labor drops dramatically due to an increased supply of vacant jobs. A similar trend was seen after 2008, when the unemployment rate rose as well.
+
+## 2: As the unemployment rate rises in general, the employment to population (EP) ratio drops linearly. This result was to be expected, as the greater the percentage of unmployed persons in a population, the lower the ratio of employed people in that population becomes.
+
+## 3: As the EP ratio increases, the EPI for organic chemicals exponentially increases. This makes sense, as the EP ratio and unemployment rate are inversely correlated. As the EP ratio rises, that means a greater percent of the population is employed, leading to a lower supply of vacant jobs and driving up the cost of labor.
+
+## 4: The Spearman correlation coefficient for the relationship between CA unemployment rate and chemical EPI was -0.26, a lot lower than I expected. The bivariate plot between the two variables implied that a high Spearman correlation would be achieved. Perhaps the low correlation was because there are several outliers around 4% unemployment.
